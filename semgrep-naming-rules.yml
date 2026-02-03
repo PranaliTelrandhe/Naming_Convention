@@ -1,0 +1,140 @@
+rules:
+  # Boolean variables → prefix b
+  - id: boolean-variable-naming
+    languages: [c]
+    message: "Boolean variable '{{matched_name}}' must start with prefix 'b'"
+    severity: ERROR
+    pattern-regex: '\b(_Bool|bool)\s+([a-zA-Z0-9_]+)'
+
+  # char → prefix c
+  - id: char-variable-naming
+    languages: [c]
+    message: "Char variable '{{matched_name}}' must start with prefix 'c'"
+    severity: ERROR
+    pattern-regex: '\bchar\s+([a-zA-Z0-9_]+)(\s*;|\s*=)'
+
+  # Char pointers → prefix pc
+  - id: char-pointer-naming
+    languages: [c]
+    message: "Char pointer '{{matched_name}}' must start with prefix 'pc'"
+    severity: ERROR
+    pattern-regex: '\bchar\s*\*\s*([a-zA-Z0-9_]+)'
+
+  # Char arrays → prefix ac
+  - id: char-array-naming
+    languages: [c]
+    message: "Char array '{{matched_name}}' must start with prefix 'ac'"
+    severity: ERROR
+    pattern-regex: '\bchar\s+([a-zA-Z0-9_]+)\s*\[.*\]'
+
+  # float → prefix f
+  - id: float-variable-naming
+    languages: [c]
+    message: "Float variable '{{matched_name}}' must start with prefix 'f'"
+    severity: ERROR
+    pattern-regex: '\bfloat\s+([a-zA-Z0-9_]+)(\s*;|\s*=)'
+
+  # double → prefix d
+  - id: double-variable-naming
+    languages: [c]
+    message: "Double variable '{{matched_name}}' must start with prefix 'd'"
+    severity: ERROR
+    pattern-regex: '\bdouble\s+([a-zA-Z0-9_]+)(\s*;|\s*=)'
+
+  # Signed integers → i8/i16/i32
+  - id: signed-int-naming
+    languages: [c]
+    message: "Signed integer '{{matched_name}}' must follow prefix rules (i8/i16/i32)"
+    severity: ERROR
+    pattern-regex: '\b(int8_t|int16_t|int32_t|signed\s+char|short|int)\s+([a-zA-Z0-9_]+)(\s*;|\s*=)'
+
+  # Unsigned integers → u8/u16/u32
+  - id: unsigned-int-naming
+    languages: [c]
+    message: "Unsigned integer '{{matched_name}}' must follow prefix rules (u8/u16/u32)"
+    severity: ERROR
+    pattern-regex: '\b(uint8_t|uint16_t|uint32_t|unsigned\s+char|unsigned\s+short|unsigned\s+int)\s+([a-zA-Z0-9_]+)(\s*;|\s*=)'
+
+  # float pointer → pf
+  - id: float-pointer-naming
+    languages: [c]
+    message: "Float pointer '{{matched_name}}' must start with prefix 'pf'"
+    severity: ERROR
+    pattern-regex: '\bfloat\s*\*\s*([a-zA-Z0-9_]+)'
+
+  # void pointer → pv
+  - id: void-pointer-naming
+    languages: [c]
+    message: "Void pointer '{{matched_name}}' must start with prefix 'pv'"
+    severity: ERROR
+    pattern-regex: '\bvoid\s*\*\s*([a-zA-Z0-9_]+)'
+
+  # int8_t* → pi8
+  - id: int8-pointer-naming
+    languages: [c]
+    message: "Signed 8-bit pointer '{{matched_name}}' must start with prefix 'pi8'"
+    severity: ERROR
+    pattern-regex: '\bint8_t\s*\*\s*([a-zA-Z0-9_]+)'
+
+  # uint8_t* → pu8
+  - id: uint8-pointer-naming
+    languages: [c]
+    message: "Unsigned 8-bit pointer '{{matched_name}}' must start with prefix 'pu8'"
+    severity: ERROR
+    pattern-regex: '\buint8_t\s*\*\s*([a-zA-Z0-9_]+)'
+
+  # int16_t* → pi16
+  - id: int16-pointer-naming
+    languages: [c]
+    message: "Signed 16-bit pointer '{{matched_name}}' must start with prefix 'pi16'"
+    severity: ERROR
+    pattern-regex: '\bint16_t\s*\*\s*([a-zA-Z0-9_]+)'
+
+  # uint16_t* → pu16
+  - id: uint16-pointer-naming
+    languages: [c]
+    message: "Unsigned 16-bit pointer '{{matched_name}}' must start with prefix 'pu16'"
+    severity: ERROR
+    pattern-regex: '\buint16_t\s*\*\s*([a-zA-Z0-9_]+)'
+
+  # int32_t* → pi32
+  - id: int32-pointer-naming
+    languages: [c]
+    message: "Signed 32-bit pointer '{{matched_name}}' must start with prefix 'pi32'"
+    severity: ERROR
+    pattern-regex: '\bint32_t\s*\*\s*([a-zA-Z0-9_]+)'
+
+  # uint32_t* → pu32
+  - id: uint32-pointer-naming
+    languages: [c]
+    message: "Unsigned 32-bit pointer '{{matched_name}}' must start with prefix 'pu32'"
+    severity: ERROR
+    pattern-regex: '\buint32_t\s*\*\s*([a-zA-Z0-9_]+)'
+
+  # Function pointers → fn
+  - id: function-pointer-naming
+    languages: [c]
+    message: "Function pointer '{{matched_name}}' must start with prefix 'fn'"
+    severity: ERROR
+    pattern-regex: '\b[a-zA-Z0-9_]+\s*\(\*\s*([a-zA-Z0-9_]+)\)\s*\(.*\)'
+
+  # Arrays (non-char) → prefix a
+  - id: array-variable-naming
+    languages: [c]
+    message: "Array '{{matched_name}}' must start with prefix 'a'"
+    severity: ERROR
+    pattern-regex: '\b(?!char\b)[a-zA-Z0-9_]+\s+([a-zA-Z0-9_]+)\s*\[.*\]'
+
+  # Struct typedefs → prefix s
+  - id: struct-typedef-naming
+    languages: [c]
+    message: "Struct typedef '{{matched_name}}' must start with prefix 's'"
+    severity: ERROR
+    pattern-regex: 'typedef\s+struct\s+[a-zA-Z0-9_]+\s+([a-zA-Z0-9_]+)'
+
+  # Enum typedefs → prefix e
+  - id: enum-typedef-naming
+    languages: [c]
+    message: "Enum typedef '{{matched_name}}' must start with prefix 'e'"
+    severity: ERROR
+    pattern-regex: 'typedef\s+enum\s+[a-zA-Z0-9_]+\s+([a-zA-Z0-9_]+)'
