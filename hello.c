@@ -1,45 +1,60 @@
 #include <stdio.h>
-#include <stdlib.h>
+#include <stdbool.h>
 
-int unused_func ()
+// Correct variable declarations following VmedD rules
+bool bIsActive;
+char cChoice;
+int *pCounter;
+int aNumbers[10];
+struct sEmployee
 {
-	int i;
-	int overrun[10];
-	char *leak;
-	char *unused = "unused string";
-
-	if (i) {
-		printf ("uninitialized variable\n");
-	}
-
-	for (i=0; i<=10; i++) {
-		overrun[i] = i;
-	}
-
-	leak = malloc(256);
-
-	return(0);
-	printf ("structurally dead code\n");
-}
-
-int main (int argc, char **argv)
+	char cName[50];
+	int nAge;
+};
+enum eStatus
 {
-	int unused;
-	char *ptr = NULL;
+	STATUS_ACTIVE,
+	STATUS_INACTIVE
+};
+float fpSalary;
+double dbBudget;
+void (*fnCalculator)(int, int);
 
-	if (argc < 0) {
-		printf ("abnormal termination\n");
-		abort ();
-	}
+// Violations - these should be flagged
+bool Active;	// Should start with 'b'
+char input;		// Should start with 'c'
+int *pointer;	// Should start with 'p'
+int numbers[5]; // Should start with 'a'
+struct employee
+{ // Should start with 's'
+	char name[50];
+	int age;
+};
+enum status
+{ // Should start with 'e'
+	ACTIVE,
+	INACTIVE
+};
+float salary;				  // Should start with 'fp'
+double budget;				  // Should start with 'db'
+void (*calculator)(int, int); // Should start with 'fn'
 
-	if (ptr != ptr) {
-		printf ("same on both sides\n");
-	}
+int main()
+{
+	// Local variables - some correct, some violations
+	bool bIsDone = false;
+	char cInput = 'A';
+	int *pValue = NULL;
+	int aScores[3] = {90, 85, 95};
+	float fpAverage = 88.5;
+	double dbTotal = 1000.75;
 
-	if (ptr != NULL) {
-		printf ("logically dead code\n");
-	}
+	// Violations
+	bool completed = true;
+	char key = 'K';
+	int *ptr = NULL;
+	float average = 77.5;
 
-	printf ("hello world\n");
-	return(0);
+	printf("Testing VmedD naming conventions\n");
+	return 0;
 }
