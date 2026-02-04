@@ -1,0 +1,55 @@
+# ===============================
+# Clang-Format Configuration (C)
+# ===============================
+
+Language: C
+BasedOnStyle: LLVM
+
+# Indentation
+IndentWidth: 4
+TabWidth: 4
+UseTab: Never
+
+# Braces
+BreakBeforeBraces: Allman
+BraceWrapping:
+  AfterFunction: true
+  AfterControlStatement: true
+  AfterStruct: true
+  AfterUnion: true
+  AfterEnum: true
+  BeforeElse: true
+  BeforeCatch: true
+
+# Line length
+ColumnLimit: 100
+
+# Spaces
+SpaceBeforeParens: ControlStatements
+SpacesInParentheses: false
+SpacesInSquareBrackets: false
+SpaceBeforeAssignmentOperators: true
+
+# Pointer alignment
+PointerAlignment: Left
+DerivePointerAlignment: false
+
+# Function formatting
+AllowShortFunctionsOnASingleLine: None
+AllowShortIfStatementsOnASingleLine: false
+AllowShortLoopsOnASingleLine: false
+
+# Alignments
+AlignAfterOpenBracket: Align
+AlignConsecutiveAssignments: true
+AlignConsecutiveDeclarations: true
+
+# Includes
+SortIncludes: true
+
+# Comments
+ReflowComments: true
+AlignTrailingComments: true
+
+# Preprocessor
+IndentPPDirectives: AfterHash

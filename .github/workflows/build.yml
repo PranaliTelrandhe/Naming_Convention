@@ -8,7 +8,7 @@ on:
 
 jobs:
   build:
-    runs-on: [self-hosted, windows]  # ensures it runs on your self-hosted Windows runner
+    runs-on: [self-hosted, windows] # ensures it runs on your self-hosted Windows runner
 
     steps:
       # Step 1: Checkout code
@@ -16,16 +16,21 @@ jobs:
         uses: actions/checkout@v3
 
       # Step 2: Run Semgrep Naming Convention Scan
-      # We use 'continue-on-error' so the build still runs even if rules are violated, 
+      # We use 'continue-on-error' so the build still runs even if rules are violated,
       # or you can remove it to block the build on failure.
       - name: Run Semgrep Scan
         run: semgrep --config semgrep-naming-rules.yml
         continue-on-error: true
-        
-      # Step 3: Build C project
+
+      # Step 3: Format Code (CLang Format)
+      # This fixes formatting for all .c and .h files in the directory
+      - name: Run Clang Format
+        run: clang-format -i *.c *.h
+
+      # Step 4: Build C project
       - name: Build project
         run: gcc hello.c -o hello.exe
 
-      # Step 4: Run the executable (acts as a basic test)
+      # Step 5: Run the executable (acts as a basic test)
       - name: Run executable
         run: .\hello.exe
