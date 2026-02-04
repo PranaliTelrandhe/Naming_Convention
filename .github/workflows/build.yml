@@ -22,10 +22,15 @@ jobs:
         run: semgrep --config semgrep-naming-rules.yml
         continue-on-error: true
 
-      # Step 3: Format Code (CLang Format)
-      # This fixes formatting for all .c and .h files in the directory
+      # Step 2: Format Code
       - name: Run Clang Format
-        run: clang-format -i *.c *.h
+        run: |
+          $files = Get-ChildItem -Path . -Include *.c,*.h -Recurse
+          if ($files) {
+              $files | ForEach-Object { clang-format -i $_.FullName }
+          } else {
+              Write-Host "No C or H files found to format."
+          }
 
       # Step 4: Build C project
       - name: Build project
