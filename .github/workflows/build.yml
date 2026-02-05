@@ -37,7 +37,7 @@ jobs:
       - name: Add CMake to PATH
         run: $env:PATH += ";C:\Program Files\CMake\bin"
 
-      - name: Generate CMake compilation database
+      - name: Configure CMake
         run: cmake -S . -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 
         # Step 4: Run Clang-Tidy
