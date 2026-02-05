@@ -33,8 +33,9 @@ jobs:
           }
 
         # Step: Generate compile_commands.json
-      - name: Check CMake PATH
-        run: cmake --version
+
+      - name: Add CMake to PATH
+        run: $env:PATH += ";C:\Program Files\CMake\bin"
 
       - name: Generate CMake compilation database
         run: cmake -S . -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
