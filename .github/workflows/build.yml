@@ -40,6 +40,10 @@ jobs:
         shell: powershell
 
       # 5. Generate build files (Fixes the Cache Error)
+      - name: List files for debugging
+        run: Get-ChildItem -Recurse -Filter "CMakeLists.txt"
+        shell: powershell
+
       - name: Generate build files with CMake
         run: |
           # Delete old build folder if it exists to avoid directory mismatch errors
