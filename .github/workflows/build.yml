@@ -32,6 +32,18 @@ jobs:
               Write-Host "No C or H files found to format."
           }
 
+        # Step 4: Run Clang-Tidy
+      - name: Run Clang-Tidy
+        run: |
+          $files = Get-ChildItem -Path . -Include *.c,*.h -Recurse
+          if ($files) {
+              foreach ($file in $files) {
+                  clang-tidy $file.FullName -p build -checks="clang-analyzer-*,bugprone-*" --warnings-as-errors="*"
+              }
+          } else {
+              Write-Host "No C or H files found for Clang-Tidy."
+          }
+
       # Step 4: Build C project
       - name: Build project
         run: gcc hello.c -o hello.exe
