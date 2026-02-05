@@ -1,6 +1,6 @@
 #include <stdbool.h>
 #include <stdio.h>
-// Correct variable declarations following VmedD rules
+//  Correct variable declarations following VmedD rules
 bool bIsActive;
 char cChoice;
 int* pCounter;
