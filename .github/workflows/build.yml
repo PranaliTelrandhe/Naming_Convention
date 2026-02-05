@@ -32,6 +32,10 @@ jobs:
               Write-Host "No C or H files found to format."
           }
 
+        # Step: Generate compile_commands.json
+      - name: Generate CMake compilation database
+        run: cmake -S . -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+
         # Step 4: Run Clang-Tidy
       - name: Run Clang-Tidy
         run: |
