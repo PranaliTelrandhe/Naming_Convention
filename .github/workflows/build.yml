@@ -41,7 +41,9 @@ jobs:
 
       # Step 3: Create build folder and run CMake with MinGW
       - name: Generate build files with CMake
-        run: cd "C:\Program Files\CMake\bin\cmake.exe" -S . -B build -G "MinGW Makefiles" -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++
+        run: |
+          & "C:\Program Files\CMake\bin\cmake.exe" -S . -B build -G "MinGW Makefiles" `
+           -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++
         shell: powershell
 
       # Step 4: Build the project
