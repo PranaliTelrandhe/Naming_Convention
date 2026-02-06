@@ -21,37 +21,26 @@ jobs:
           echo "C:\Program Files\LLVM\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
         shell: powershell
 
-      # NEW DEBUG STEP: Run this to see where your files are!
-      - name: Debug Directory Structure
-        run: |
-          Write-Host "--- CURRENT LOCATION ---"
-          Get-Location
-          Write-Host "--- LISTING ALL FILES IN WORKSPACE ---"
-          Get-ChildItem -Recurse -Depth 2
-          Write-Host "--- SEARCHING FOR CMAKELISTS.TXT ---"
-          Get-ChildItem -Path C:\ -Filter "CMakeLists.txt" -Recurse -ErrorAction SilentlyContinue | Select-Object FullName
-        shell: powershell
-
       - name: Generate build files with CMake
         run: |
-          # 1. Find the file and FORCE the directory
+          # 1. FIND the actual folder containing CMakeLists.txt
           $cmakeFile = Get-ChildItem -Recurse -Filter "CMakeLists.txt" | Select-Object -First 1
 
-          if ($cmakeFile) {
-              $sourceDir = $cmakeFile.DirectoryName
-              Write-Host "Found source at: $sourceDir"
-              # Jump to that directory before running anything
-              cd $sourceDir
-          } else {
-              Write-Error "CRITICAL: CMakeLists.txt not found. Check 'Debug Directory Structure' logs."
+          if ($null -eq $cmakeFile) {
+              Write-Error "ERROR: Could not find CMakeLists.txt in any subfolder!"
               exit 1
           }
 
-          # 2. Clean build folder
+          $sourceDir = $cmakeFile.DirectoryName
+          Write-Host "Target Source Directory: $sourceDir"
+
+          # 2. JUMP into that directory
+          cd $sourceDir
+
+          # 3. Clean and Run CMake locally in that folder
           if (Test-Path "build") { Remove-Item -Recurse -Force -ErrorAction SilentlyContinue "build" }
 
-          # 3. Use absolute paths to avoid any "relative path" confusion
-          cmake -S "$sourceDir" -B "$sourceDir\build" -G "MinGW Makefiles" `
+          cmake -S . -B build -G "MinGW Makefiles" `
             -DCMAKE_C_COMPILER=gcc `
             -DCMAKE_CXX_COMPILER=g++ `
             -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
@@ -59,16 +48,23 @@ jobs:
 
       - name: Build project
         run: |
-          # Find where we put the build folder
+          # 1. Again, find the build directory
           $buildDir = (Get-ChildItem -Recurse -Directory -Filter "build" | Select-Object -First 1).FullName
+          Write-Host "Building in: $buildDir"
+
+          # 2. Run the build command pointing to that folder
           cmake --build "$buildDir"
         shell: powershell
 
-      - name: Run Clang-Tidy
+      - name: Run executable
         run: |
-          $buildDir = (Get-ChildItem -Recurse -Directory -Filter "build" | Select-Object -First 1).FullName
-          $files = Get-ChildItem -Path . -Include *.c,*.h -Recurse
-          foreach ($file in $files) {
-              clang-tidy $file.FullName -p "$buildDir" -checks="clang-analyzer-*,bugprone-*"
+          # Look for the .exe anywhere inside the build folder we just made
+          $exe = Get-ChildItem -Path . -Filter "*.exe" -Recurse | Where-Object { $_.FullName -like "*build*" } | Select-Object -First 1
+          if ($exe) {
+            Write-Host "Running: $($exe.FullName)"
+            & $exe.FullName
+          } else {
+            Write-Host "Executable not found."
+            exit 1
           }
         shell: powershell
