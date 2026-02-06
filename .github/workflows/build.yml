@@ -45,10 +45,9 @@ jobs:
         shell: powershell
 
       - name: Generate build files with CMake
+        working-directory: C:\Users\Pranali\Git_Workspace\Naming\Naming_Convention\actions-runner-win-x64-2.331.0\naming\Naming_Convention\Naming_Convention # Run everything from inside this folder
         run: |
-          # Delete old build folder if it exists to avoid directory mismatch errors
           if (Test-Path build) { Remove-Item -Recurse -Force build }
-
           cmake -S . -B build -G "MinGW Makefiles" `
             -DCMAKE_C_COMPILER=gcc `
             -DCMAKE_CXX_COMPILER=g++
