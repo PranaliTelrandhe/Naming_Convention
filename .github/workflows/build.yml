@@ -68,3 +68,12 @@ jobs:
               exit 1
           }
         shell: powershell
+
+        # Step 6: Upload the compiled executable
+      - name: Upload Build Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-executable
+          # This path points to the build folder we created earlier
+          path: ./Naming_Convention/build/hello.exe
+          if-no-files-found: error
