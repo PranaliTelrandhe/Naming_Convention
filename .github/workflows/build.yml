@@ -16,6 +16,7 @@ jobs:
         uses: actions/checkout@v3
 
       # 2. Add Tools to PATH
+      # Using GITHUB_PATH ensures tools are available for all following steps
       - name: Add Tools to PATH
         run: |
           echo "C:\msys64\mingw64\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
@@ -40,10 +41,15 @@ jobs:
         shell: powershell
 
       # 5. Generate build files
-      # We run this from the root where CMakeLists.txt is located.
+      # Logic: Move to workspace, wipe old build, and configure
       - name: Generate build files with CMake
         run: |
-          if (Test-Path build) { Remove-Item -Recurse -Force build }
+          cd $env:GITHUB_WORKSPACE
+
+          # Clean build folder with error suppression (fixes self-hosted lock issues)
+          if (Test-Path "build") { 
+              Remove-Item -Recurse -Force -ErrorAction SilentlyContinue "build" 
+          }
 
           cmake -S . -B build -G "MinGW Makefiles" `
             -DCMAKE_C_COMPILER=gcc `
@@ -54,18 +60,19 @@ jobs:
       # 6. Build the project
       - name: Build project
         run: |
+          cd $env:GITHUB_WORKSPACE
           cmake --build build
         shell: powershell
 
       # 7. Run Clang-Tidy
-      # This uses the compile_commands.json created in Step 5
       - name: Run Clang-Tidy
         run: |
+          cd $env:GITHUB_WORKSPACE
           $files = Get-ChildItem -Path . -Include *.c,*.h -Recurse
           if ($files) {
               foreach ($file in $files) {
                   Write-Host "Running clang-tidy on $($file.FullName)"
-                  # -p build tells clang-tidy where to find the compilation database
+                  # -p build points to compile_commands.json
                   clang-tidy $file.FullName -p build -checks="clang-analyzer-*,bugprone-*"
               }
           }
@@ -74,12 +81,13 @@ jobs:
       # 8. Run the executable
       - name: Run executable
         run: |
-          # Use a wildcard or specific name. Replace 'hello.exe' with your actual target name
-          $exe = Get-ChildItem -Path build -Filter "*.exe" | Select-Object -First 1
+          cd $env:GITHUB_WORKSPACE
+          $exe = Get-ChildItem -Path build -Filter "*.exe" -Recurse | Select-Object -First 1
           if ($exe) {
             Write-Host "Running $($exe.FullName)"
             & $exe.FullName
           } else {
-            Write-Host "No executable found in build directory."
+            Write-Host "Error: No executable found in build directory."
+            exit 1
           }
         shell: powershell
