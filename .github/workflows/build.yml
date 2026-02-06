@@ -8,60 +8,54 @@ on:
 
 jobs:
   build:
-    runs-on: [self-hosted, windows]
+    runs-on: [self-hosted, windows] # ensures it runs on your self-hosted Windows runner
 
     steps:
+      # Step 1: Checkout code
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Add Tools to PATH
+      # Step 2: Run Semgrep Naming Convention Scan
+      # We use 'continue-on-error' so the build still runs even if rules are violated,
+      # or you can remove it to block the build on failure.
+      - name: Run Semgrep Scan
+        run: semgrep --config semgrep-naming-rules.yml
+        continue-on-error: true
+
+      # Step 2: Format Code
+      - name: Run Clang Format
         run: |
-          "C:\msys64\mingw64\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-          "C:\Program Files\CMake\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-          "C:\Program Files\LLVM\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-        shell: powershell
-
-      # --- DEBUG STEP: This will show us exactly where the CMakeLists.txt is ---
-      - name: Locate CMakeLists
-        run: |
-          Write-Host "Current Directory: $pwd"
-          Write-Host "Searching for CMakeLists.txt..."
-          Get-ChildItem -Path . -Filter "CMakeLists.txt" -Recurse
-        shell: powershell
-
-      - name: Debug and Build
-        run: |
-          # 1. List everything to see exactly where we are
-          Write-Host "--- Checking Directory Structure ---"
-          Get-ChildItem -Path . -Recurse -Filter "CMakeLists.txt" | Select-Object FullName
-
-          # 2. Hard-change directory based on your log's "safe directory"
-          # This matches the path Git revealed in your error log
-          $targetPath = "Naming_Convention/Naming_Convention"
-
-          if (Test-Path $targetPath) {
-              cd $targetPath
-              Write-Host "Switched to: $(Get-Location)"
+          $files = Get-ChildItem -Path . -Include *.c,*.h -Recurse
+          if ($files) {
+              $files | ForEach-Object { clang-format -i $_.FullName }
           } else {
-              Write-Host "Warning: $targetPath not found, staying in root."
+              Write-Host "No C or H files found to format."
           }
 
-          # 3. Clean and Build
-          if (Test-Path build) { Remove-Item -Recurse -Force build }
+        # Step: Generate compile_commands.json
 
-          # Explicitly verify CMakeLists exists here before running
-          if (Test-Path "CMakeLists.txt") {
-              cmake -S . -B build -G "MinGW Makefiles" -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++
-              cmake --build build
+      - name: Add CMake to PATH
+        run: $env:PATH += ";C:\Program Files\CMake\bin"
+
+      - name: Configure CMake
+        run: cmake -S . -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+
+        # Step 4: Run Clang-Tidy
+      - name: Run Clang-Tidy
+        run: |
+          $files = Get-ChildItem -Path . -Include *.c,*.h -Recurse
+          if ($files) {
+              foreach ($file in $files) {
+                  clang-tidy $file.FullName -p build -checks="clang-analyzer-*,bugprone-*" --warnings-as-errors="*"
+              }
           } else {
-              Write-Error "CRITICAL: CMakeLists.txt still not found in $(Get-Location)"
-              exit 1
+              Write-Host "No C or H files found for Clang-Tidy."
           }
-        shell: powershell
 
-      - name: Upload Build Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: windows-executable
-          # This looks for any .exe inside any build folder found
-          path: "**/build/*.exe"
+      # Step 4: Build C project
+      - name: Build project
+        run: gcc hello.c -o hello.exe
+
+      # Step 5: Run the executable (acts as a basic test)
+      - name: Run executable
+        run: .\hello.exe
