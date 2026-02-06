@@ -44,14 +44,16 @@ jobs:
         run: Get-ChildItem -Recurse -Filter "CMakeLists.txt"
         shell: powershell
 
-      - name: Generate build files with CMake
-        working-directory: C:\Users\Pranali\Git_Workspace\Naming\Naming_Convention\actions-runner-win-x64-2.331.0\naming\Naming_Convention\Naming_Convention # Run everything from inside this folder
+      - name: Build Project
+       # This moves the runner into the folder where your code lives
+        working-directory: ./Naming_Convention 
         run: |
-          if (Test-Path build) { Remove-Item -Recurse -Force build }
-          cmake -S . -B build -G "MinGW Makefiles" `
-            -DCMAKE_C_COMPILER=gcc `
-            -DCMAKE_CXX_COMPILER=g++
-        shell: powershell
+         if (Test-Path build) { Remove-Item -Recurse -Force build }
+    
+        # Now -S . will work because you are already in the right folder
+       cmake -S . -B build -G "MinGW Makefiles" `
+        -DCMAKE_C_COMPILER=gcc `
+        -DCMAKE_CXX_COMPILER=g++
 
       # 6. Build the project using CMake
       - name: Build project
