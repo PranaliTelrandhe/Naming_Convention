@@ -29,23 +29,34 @@ jobs:
           Get-ChildItem -Path . -Filter "CMakeLists.txt" -Recurse
         shell: powershell
 
-      - name: Generate build files
+      - name: Debug and Build
         run: |
-          # We search for the directory containing CMakeLists.txt dynamically
-          $cmakeDir = Get-ChildItem -Path . -Filter "CMakeLists.txt" -Recurse | Select-Object -First 1 -ExpandProperty DirectoryName
+          # 1. List everything to see exactly where we are
+          Write-Host "--- Checking Directory Structure ---"
+          Get-ChildItem -Path . -Recurse -Filter "CMakeLists.txt" | Select-Object FullName
 
-          if ($null -eq $cmakeDir) {
-              Write-Error "Could not find CMakeLists.txt anywhere in the workspace!"
-              exit 1
+          # 2. Hard-change directory based on your log's "safe directory"
+          # This matches the path Git revealed in your error log
+          $targetPath = "Naming_Convention/Naming_Convention"
+
+          if (Test-Path $targetPath) {
+              cd $targetPath
+              Write-Host "Switched to: $(Get-Location)"
+          } else {
+              Write-Host "Warning: $targetPath not found, staying in root."
           }
 
-          Write-Host "Found CMakeLists in: $cmakeDir"
-          cd $cmakeDir
-
-          # Clean and Build
+          # 3. Clean and Build
           if (Test-Path build) { Remove-Item -Recurse -Force build }
-          cmake -S . -B build -G "MinGW Makefiles" -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++
-          cmake --build build
+
+          # Explicitly verify CMakeLists exists here before running
+          if (Test-Path "CMakeLists.txt") {
+              cmake -S . -B build -G "MinGW Makefiles" -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++
+              cmake --build build
+          } else {
+              Write-Error "CRITICAL: CMakeLists.txt still not found in $(Get-Location)"
+              exit 1
+          }
         shell: powershell
 
       - name: Upload Build Artifact
