@@ -1,15 +1,17 @@
 Checks: >
-  -*
-  readability-identifier-naming
+  clang-analyzer-*,
+  bugprone-*,
+  readability-*,
+  modernize-*,
+  performance-*, 
+  cppcoreguidelines-*
+
+WarningsAsErrors: "*"
+
+HeaderFilterRegex: ".*" # Check your project headers, not system includes
 
 CheckOptions:
-  - key: readability-identifier-naming.FunctionCase
-    value: lower_case
-  - key: readability-identifier-naming.VariableCase
-    value: lower_case
-  - key: readability-identifier-naming.ParameterCase
-    value: lower_case
-  - key: readability-identifier-naming.GlobalVariableCase
-    value: lower_case
-  - key: readability-identifier-naming.MacroDefinitionCase
-    value: UPPER_CASE
+  - key: readability-magic-numbers.IgnoredValues
+    value: "0,1"
+  - key: cppcoreguidelines-avoid-magic-numbers.IgnoreEnumerators
+    value: "1"
