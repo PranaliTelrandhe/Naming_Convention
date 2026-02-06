@@ -8,63 +8,69 @@ on:
 
 jobs:
   build:
-    runs-on: [self-hosted, windows]
+    runs-on: [self-hosted, windows] # ensures it runs on your self-hosted Windows runner
 
     steps:
+      # Step 1: Checkout code
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Add Tools to PATH
+      # Step 2: Run Semgrep Naming Convention Scan
+      # We use 'continue-on-error' so the build still runs even if rules are violated,
+      # or you can remove it to block the build on failure.
+      - name: Run Semgrep Scan
+        run: semgrep --config semgrep-naming-rules.yml
+        continue-on-error: true
+
+      # Step 2: Format Code
+      - name: Run Clang Format
         run: |
-          echo "C:\msys64\mingw64\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-          echo "C:\Program Files\CMake\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-          echo "C:\Program Files\LLVM\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+          $files = Get-ChildItem -Path . -Include *.c,*.h -Recurse
+          if ($files) {
+              $files | ForEach-Object { clang-format -i $_.FullName }
+          } else {
+              Write-Host "No C or H files found to format."
+          }
+
+        # Step 2: Set up paths (MinGW, Clang, CMake should be on your runner)
+      - name: Ensure Tools are on PATH
+        run: |
+          $env:Path += ";C:\msys64\mingw64\bin;C:\Program Files\CMake\bin;C:\Program Files\LLVM\bin"
+          Write-Host "PATH: $env:Path"
         shell: powershell
 
+      # Step 3: Create build folder and run CMake with MinGW
       - name: Generate build files with CMake
         run: |
-          # 1. FIND the actual folder containing CMakeLists.txt
-          $cmakeFile = Get-ChildItem -Recurse -Filter "CMakeLists.txt" | Select-Object -First 1
-
-          if ($null -eq $cmakeFile) {
-              Write-Error "ERROR: Could not find CMakeLists.txt in any subfolder!"
-              exit 1
-          }
-
-          $sourceDir = $cmakeFile.DirectoryName
-          Write-Host "Target Source Directory: $sourceDir"
-
-          # 2. JUMP into that directory
-          cd $sourceDir
-
-          # 3. Clean and Run CMake locally in that folder
-          if (Test-Path "build") { Remove-Item -Recurse -Force -ErrorAction SilentlyContinue "build" }
-
-          cmake -S . -B build -G "MinGW Makefiles" `
-            -DCMAKE_C_COMPILER=gcc `
-            -DCMAKE_CXX_COMPILER=g++ `
-            -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+          & "C:\Program Files\CMake\bin\cmake.exe" -S . -B build -G "MinGW Makefiles" `
+           -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++
         shell: powershell
 
+      # Step 4: Build the project
       - name: Build project
         run: |
-          # 1. Again, find the build directory
-          $buildDir = (Get-ChildItem -Recurse -Directory -Filter "build" | Select-Object -First 1).FullName
-          Write-Host "Building in: $buildDir"
-
-          # 2. Run the build command pointing to that folder
-          cmake --build "$buildDir"
+          cd build
+          mingw32-make
         shell: powershell
 
-      - name: Run executable
+      # Step 5: Run Clang-Tidy on all .c and .h files
+      - name: Run Clang-Tidy
         run: |
-          # Look for the .exe anywhere inside the build folder we just made
-          $exe = Get-ChildItem -Path . -Filter "*.exe" -Recurse | Where-Object { $_.FullName -like "*build*" } | Select-Object -First 1
-          if ($exe) {
-            Write-Host "Running: $($exe.FullName)"
-            & $exe.FullName
+          $files = Get-ChildItem -Path . -Include *.c,*.h -Recurse
+          if ($files) {
+              foreach ($file in $files) {
+                  Write-Host "Running clang-tidy on $($file.FullName)"
+                  clang-tidy $file.FullName -p build -checks="clang-analyzer-*,bugprone-*" --warnings-as-errors="*"
+              }
           } else {
-            Write-Host "Executable not found."
-            exit 1
+              Write-Host "No C or H files found for Clang-Tidy."
           }
         shell: powershell
+
+      # Step 4: Build C project
+      - name: Build project
+        run: gcc hello.c -o hello.exe
+
+      # Step 5: Run the executable (acts as a basic test)
+      - name: Run executable
+        run: .\hello.exe
