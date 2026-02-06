@@ -8,21 +8,21 @@ on:
 
 jobs:
   build:
-    runs-on: [self-hosted, windows] # ensures it runs on your self-hosted Windows runner
+    runs-on: [self-hosted, windows]
 
     steps:
-      # Step 1: Checkout code
+      # Step 1: Checkout code with a clean workspace
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
+        with:
+          clean: true
 
       # Step 2: Run Semgrep Naming Convention Scan
-      # We use 'continue-on-error' so the build still runs even if rules are violated,
-      # or you can remove it to block the build on failure.
       - name: Run Semgrep Scan
         run: semgrep --config semgrep-naming-rules.yml
         continue-on-error: true
 
-      # Step 2: Format Code
+      # Step 3: Format Code
       - name: Run Clang Format
         run: |
           $files = Get-ChildItem -Path . -Include *.c,*.h -Recurse
@@ -32,30 +32,55 @@ jobs:
               Write-Host "No C or H files found to format."
           }
 
-        # Step: Generate compile_commands.json
-
+      # Step 4: Setup Environment & Generate Compilation Database
       - name: Add CMake to PATH
-        run: $env:PATH += ";C:\Program Files\CMake\bin"
+        run: |
+          $cmakePath = "C:\Program Files\CMake\bin"
+          if ($env:PATH -notlike "*$cmakePath*") {
+              echo "Adding CMake to Path"
+              $env:PATH += ";$cmakePath"
+              [Environment]::SetEnvironmentVariable("Path", $env:PATH, [EnvironmentVariableTarget]::Process)
+          }
 
-      - name: Configure CMake
-        run: cmake -S . -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+      - name: Configure CMake (Clean Build)
+        run: |
+          # This prevents the "CMakeCache.txt directory is different" error
+          if (Test-Path build) { 
+              Write-Host "Removing existing build directory for a fresh start..."
+              Remove-Item -Recurse -Force build 
+          }
+          cmake -S . -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 
-        # Step 4: Run Clang-Tidy
+      # Step 5: Run Clang-Tidy
       - name: Run Clang-Tidy
         run: |
           $files = Get-ChildItem -Path . -Include *.c,*.h -Recurse
           if ($files) {
               foreach ($file in $files) {
+                  # Using the compile_commands.json generated in the 'build' folder
                   clang-tidy $file.FullName -p build -checks="clang-analyzer-*,bugprone-*" --warnings-as-errors="*"
               }
-          } else {
-              Write-Host "No C or H files found for Clang-Tidy."
           }
 
-      # Step 4: Build C project
+      # Step 6: Build Project
+      # Switched to CMake build for consistency, but kept your gcc logic if preferred
       - name: Build project
-        run: gcc hello.c -o hello.exe
+        run: |
+          if (Test-Path hello.c) {
+              gcc hello.c -o hello.exe
+          } else {
+              Write-Host "hello.c not found, attempting CMake build..."
+              cmake --build build
+          }
 
-      # Step 5: Run the executable (acts as a basic test)
+      # Step 7: Run the executable
       - name: Run executable
-        run: .\hello.exe
+        run: |
+          if (Test-Path .\hello.exe) {
+              .\hello.exe
+          } else if (Test-Path .\build\Debug\hello.exe) {
+              .\build\Debug\hello.exe
+          } else {
+              Write-Host "Executable not found."
+              exit 1
+          }
