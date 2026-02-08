@@ -62,7 +62,7 @@ jobs:
               Write-Host "Removing existing build directory..."
               Remove-Item -Recurse -Force build 
           }
-          cmake -S . -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+          cmake -S $env:GITHUB_WORKSPACE -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 
       # Step 5: Run Clang-Tidy on all C/H files
       - name: Run Clang-Tidy
