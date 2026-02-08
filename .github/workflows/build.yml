@@ -58,21 +58,33 @@ jobs:
               [Environment]::SetEnvironmentVariable("Path", $env:PATH, [EnvironmentVariableTarget]::Process)
           }
 
-      # Step 5: Configure CMake
+      # Step 5: Copy CMakeLists.txt to auto-generated folder
+      - name: Copy CMakeLists.txt to auto-generated folder
+        run: |
+          $sourceRepo = $env:GITHUB_WORKSPACE
+          $autoFolder = Join-Path $sourceRepo "Naming_Convention"
+
+          if (-Not (Test-Path $autoFolder)) {
+              New-Item -ItemType Directory -Path $autoFolder
+          }
+
+          Copy-Item -Path (Join-Path $sourceRepo "CMakeLists.txt") -Destination $autoFolder -Force
+
+      # Step 6: Configure CMake
       - name: Configure CMake (Clean Build)
         run: |
-          $source = $env:GITHUB_WORKSPACE
-          $build  = Join-Path $source "build"
+          $autoFolder = Join-Path $env:GITHUB_WORKSPACE "Naming_Convention"
+          $build = Join-Path $autoFolder "build"
 
           if (Test-Path $build) { Remove-Item -Recurse -Force $build }
 
-          cmake -S $source -B $build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+          cmake -S $autoFolder -B $build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 
-      # Step 6: Run Clang-Tidy
+      # Step 7: Run Clang-Tidy
       - name: Run Clang-Tidy
         run: |
           $source = $env:GITHUB_WORKSPACE
-          $build  = Join-Path $source "build"
+          $build  = Join-Path $source "Naming_Convention/build"
           $files  = Get-ChildItem -Path $source -Include *.c,*.h -Recurse
           if ($files) {
               foreach ($file in $files) {
@@ -82,11 +94,12 @@ jobs:
               Write-Host "No C/H files found for clang-tidy."
           }
 
-      # Step 7: Build project
+      # Step 8: Build project
       - name: Build project
         run: |
           $source = $env:GITHUB_WORKSPACE
-          $build  = Join-Path $source "build"
+          $autoFolder = Join-Path $source "Naming_Convention"
+          $build = Join-Path $autoFolder "build"
 
           if (Test-Path (Join-Path $source "hello.c")) {
               gcc (Join-Path $source "hello.c") -o (Join-Path $source "hello.exe")
@@ -95,11 +108,12 @@ jobs:
               cmake --build $build
           }
 
-      # Step 8: Run the executable
+      # Step 9: Run the executable
       - name: Run executable
         run: |
           $source = $env:GITHUB_WORKSPACE
-          $build  = Join-Path $source "build"
+          $autoFolder = Join-Path $source "Naming_Convention"
+          $build = Join-Path $autoFolder "build"
 
           if (Test-Path (Join-Path $source "hello.exe")) {
               & (Join-Path $source "hello.exe")
