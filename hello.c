@@ -10,6 +10,7 @@ struct sEmployee
     char cName[50];
     int  nAge;
 };
+
 enum eStatus
 {
     STATUS_ACTIVE,
