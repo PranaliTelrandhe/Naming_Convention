@@ -53,26 +53,44 @@ jobs:
         run: |
           $cmakePath = "C:\Program Files\CMake\bin"
           if ($env:PATH -notlike "*$cmakePath*") {
-              Write-Host "Adding CMake to PATH"
               $env:PATH += ";$cmakePath"
               [Environment]::SetEnvironmentVariable("Path", $env:PATH, [EnvironmentVariableTarget]::Process)
           }
 
-      # Step 5: Add MinGW to PATH
-      - name: Add MinGW to PATH
+      # Step 5: Copy CMakeLists.txt to auto-generated folder
+      - name: Copy CMakeLists.txt
         run: |
-          $env:PATH += ";C:\msys64\mingw64\bin"
-          [Environment]::SetEnvironmentVariable("Path", $env:PATH, [EnvironmentVariableTarget]::Process)
+          $workspaceFolder = $env:GITHUB_WORKSPACE
 
-      # Step 6: Configure CMake (Clean Build)
-      - name: Configure CMake (MinGW)
+          # Runner folder (two levels up from workspace)
+          $runnerFolder = Split-Path (Split-Path $workspaceFolder -Parent) -Parent
+
+          # Repo root (one level above runner folder)
+          $repoRoot = Split-Path $runnerFolder -Parent
+
+          # Auto-generated folder (workspace folder)
+          $autoFolder = $workspaceFolder
+
+          # Ensure folder exists
+          if (-not (Test-Path $autoFolder)) { New-Item -ItemType Directory -Path $autoFolder -Force }
+
+          # Copy CMakeLists.txt from repo root to auto-generated folder
+          Copy-Item -Path (Join-Path $repoRoot "CMakeLists.txt") -Destination $autoFolder -Force
+
+      # Step 6: Configure CMake (MinGW)
+      - name: Configure CMake
         run: |
           $workspaceFolder = $env:GITHUB_WORKSPACE
           $autoFolder = $workspaceFolder
           $build = Join-Path $autoFolder "build"
 
+          # Clean previous build folder
           if (Test-Path $build) { Remove-Item -Recurse -Force $build }
 
+          # Add MinGW to PATH
+          $env:PATH += ";C:\msys64\mingw64\bin"
+
+          # Configure CMake with MinGW Makefiles
           cmake -G "MinGW Makefiles" -S $autoFolder -B $build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 
       # Step 7: Run Clang-Tidy
