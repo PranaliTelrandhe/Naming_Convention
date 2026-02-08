@@ -62,16 +62,16 @@ jobs:
       - name: Copy CMakeLists.txt
         run: |
           $workspaceFolder = $env:GITHUB_WORKSPACE
-          
-          # Calculate runner folder (two levels up from workspace)
-          $runnerFolder = Split-Path $workspaceFolder -Parent -Parent
-          
+
+          # Runner folder (two levels up)
+          $runnerFolder = Split-Path (Split-Path $workspaceFolder -Parent) -Parent
+
           # Repo root (one level above runner folder)
           $repoRoot = Split-Path $runnerFolder -Parent
-          
-          # Auto-generated folder inside workspace
+
+          # Auto-generated folder (workspace folder)
           $autoFolder = $workspaceFolder
-          
+
           if (-not (Test-Path $autoFolder)) { New-Item -ItemType Directory -Path $autoFolder -Force }
 
           # Copy CMakeLists.txt from repo root to auto-generated folder
