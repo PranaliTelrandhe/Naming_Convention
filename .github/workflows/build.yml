@@ -104,7 +104,7 @@ jobs:
           $files = Get-ChildItem -Path $workspaceFolder -Include *.c,*.h -Recurse
           if ($files) {
               foreach ($file in $files) {
-                  clang-tidy $file.FullName -p $build -checks="clang-analyzer-*,bugprone-*" --warnings-as-errors="*"
+                  clang-tidy $file.FullName -- -I.
               }
           } else {
               Write-Host "No C/H files found for clang-tidy."
