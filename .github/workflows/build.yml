@@ -4,7 +4,13 @@ on:
   push:
     branches:
       - master
+    paths:
+      - '**/*.c'
+      - '**/*.h'
   pull_request:
+    paths:
+      - '**/*.c'
+      - '**/*.h'
 
 jobs:
   build:
@@ -17,19 +23,27 @@ jobs:
         with:
           clean: true
 
-      # Step 2: Run Semgrep Naming Convention Scan
+      # Step 2: Run Semgrep Naming Convention Scan on all C/H files
       - name: Run Semgrep Scan
-        run: semgrep --config semgrep-naming-rules.yml
+        run: |
+          $files = Get-ChildItem -Path . -Include *.c,*.h -Recurse
+          if ($files) {
+              foreach ($file in $files) {
+                  semgrep --config semgrep-naming-rules.yml $file.FullName
+              }
+          } else {
+              Write-Host "No C/H files found for Semgrep scan."
+          }
         continue-on-error: true
 
-      # Step 3: Format Code
+      # Step 3: Format Code with clang-format
       - name: Run Clang Format
         run: |
           $files = Get-ChildItem -Path . -Include *.c,*.h -Recurse
           if ($files) {
               $files | ForEach-Object { clang-format -i $_.FullName }
           } else {
-              Write-Host "No C or H files found to format."
+              Write-Host "No C/H files found to format."
           }
 
       # Step 4: Setup Environment & Generate Compilation Database
@@ -37,33 +51,32 @@ jobs:
         run: |
           $cmakePath = "C:\Program Files\CMake\bin"
           if ($env:PATH -notlike "*$cmakePath*") {
-              echo "Adding CMake to Path"
+              echo "Adding CMake to PATH"
               $env:PATH += ";$cmakePath"
               [Environment]::SetEnvironmentVariable("Path", $env:PATH, [EnvironmentVariableTarget]::Process)
           }
 
       - name: Configure CMake (Clean Build)
         run: |
-          # This prevents the "CMakeCache.txt directory is different" error
           if (Test-Path build) { 
-              Write-Host "Removing existing build directory for a fresh start..."
+              Write-Host "Removing existing build directory..."
               Remove-Item -Recurse -Force build 
           }
           cmake -S . -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 
-      # Step 5: Run Clang-Tidy
+      # Step 5: Run Clang-Tidy on all C/H files
       - name: Run Clang-Tidy
         run: |
           $files = Get-ChildItem -Path . -Include *.c,*.h -Recurse
           if ($files) {
               foreach ($file in $files) {
-                  # Using the compile_commands.json generated in the 'build' folder
                   clang-tidy $file.FullName -p build -checks="clang-analyzer-*,bugprone-*" --warnings-as-errors="*"
               }
+          } else {
+              Write-Host "No C/H files found for clang-tidy."
           }
 
       # Step 6: Build Project
-      # Switched to CMake build for consistency, but kept your gcc logic if preferred
       - name: Build project
         run: |
           if (Test-Path hello.c) {

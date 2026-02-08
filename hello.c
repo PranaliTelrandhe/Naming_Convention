@@ -7,7 +7,8 @@ int* pCounter;
 int  aNumbers[10];
 struct sEmployee
 {
-    char cName[50] int nAge
+    char cName[50];
+    int  nAge;
 };
 enum eStatus
 {

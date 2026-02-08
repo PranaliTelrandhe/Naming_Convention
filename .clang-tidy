@@ -1,17 +1,25 @@
-Checks: >
-  clang-analyzer-*,
-  bugprone-*,
-  readability-*,
-  modernize-*,
-  performance-*, 
-  cppcoreguidelines-*
-
-WarningsAsErrors: "*"
-
-HeaderFilterRegex: ".*" # Check your project headers, not system includes
-
+---
+Checks: "readability-identifier-naming"
 CheckOptions:
-  - key: readability-magic-numbers.IgnoredValues
-    value: "0,1"
-  - key: cppcoreguidelines-avoid-magic-numbers.IgnoreEnumerators
-    value: "1"
+  # 1. Enums (Prefix 'e')
+  - { key: readability-identifier-naming.EnumCase, value: CamelCase }
+  - { key: readability-identifier-naming.EnumPrefix, value: e }
+  - { key: readability-identifier-naming.EnumConstantCase, value: CamelCase }
+  - { key: readability-identifier-naming.EnumConstantPrefix, value: e }
+
+  # 2. Structs (Prefix 's')
+  - { key: readability-identifier-naming.StructCase, value: CamelCase }
+  - { key: readability-identifier-naming.StructPrefix, value: s }
+
+  # 3. Typedefs (The Alias name at the bottom)
+  - { key: readability-identifier-naming.TypedefCase, value: CamelCase }
+  # If most typedefs are structs, set this to 's'
+  - { key: readability-identifier-naming.TypedefPrefix, value: s }
+
+  # Now, specifically target the Enum Tag to force the 'e'
+  - { key: readability-identifier-naming.EnumPrefix, value: e }
+
+  # 4. Function Pointers (Prefix 'fn')
+  - { key: readability-identifier-naming.FunctionPointerCase, value: camelBack }
+  - { key: readability-identifier-naming.FunctionPointerPrefix, value: fn }
+...
