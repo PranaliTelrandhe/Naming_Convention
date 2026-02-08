@@ -26,7 +26,7 @@ jobs:
       # Step 2: Run Semgrep Naming Convention Scan on all C/H files
       - name: Run Semgrep Scan
         run: |
-          $files = Get-ChildItem -Path . -Include *.c,*.h -Recurse
+          $files = Get-ChildItem -Path $env:GITHUB_WORKSPACE -Include *.c,*.h -Recurse
           if ($files) {
               foreach ($file in $files) {
                   semgrep --config semgrep-naming-rules.yml $file.FullName
@@ -39,7 +39,7 @@ jobs:
       # Step 3: Format Code with clang-format
       - name: Run Clang Format
         run: |
-          $files = Get-ChildItem -Path . -Include *.c,*.h -Recurse
+          $files = Get-ChildItem -Path $env:GITHUB_WORKSPACE -Include *.c,*.h -Recurse
           if ($files) {
               $files | ForEach-Object { clang-format -i $_.FullName }
           } else {
@@ -51,25 +51,28 @@ jobs:
         run: |
           $cmakePath = "C:\Program Files\CMake\bin"
           if ($env:PATH -notlike "*$cmakePath*") {
-              echo "Adding CMake to PATH"
+              Write-Host "Adding CMake to PATH"
               $env:PATH += ";$cmakePath"
               [Environment]::SetEnvironmentVariable("Path", $env:PATH, [EnvironmentVariableTarget]::Process)
           }
 
       - name: Configure CMake (Clean Build)
         run: |
-          Set-Location $env:GITHUB_WORKSPACE
-          if (Test-Path build) { Remove-Item -Recurse -Force build }
-          cmake -S . -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+          $source = $env:GITHUB_WORKSPACE
+          $build  = Join-Path $source "build"
 
+          if (Test-Path $build) { Remove-Item -Recurse -Force $build }
+
+          cmake -S $source -B $build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 
       # Step 5: Run Clang-Tidy on all C/H files
       - name: Run Clang-Tidy
         run: |
-          $files = Get-ChildItem -Path . -Include *.c,*.h -Recurse
+          $files = Get-ChildItem -Path $env:GITHUB_WORKSPACE -Include *.c,*.h -Recurse
+          $build = Join-Path $env:GITHUB_WORKSPACE "build"
           if ($files) {
               foreach ($file in $files) {
-                  clang-tidy $file.FullName -p build -checks="clang-analyzer-*,bugprone-*" --warnings-as-errors="*"
+                  clang-tidy $file.FullName -p $build -checks="clang-analyzer-*,bugprone-*" --warnings-as-errors="*"
               }
           } else {
               Write-Host "No C/H files found for clang-tidy."
@@ -78,20 +81,26 @@ jobs:
       # Step 6: Build Project
       - name: Build project
         run: |
-          if (Test-Path hello.c) {
-              gcc hello.c -o hello.exe
+          $source = $env:GITHUB_WORKSPACE
+          $build  = Join-Path $source "build"
+
+          if (Test-Path (Join-Path $source "hello.c")) {
+              gcc (Join-Path $source "hello.c") -o (Join-Path $source "hello.exe")
           } else {
               Write-Host "hello.c not found, attempting CMake build..."
-              cmake --build build
+              cmake --build $build
           }
 
       # Step 7: Run the executable
       - name: Run executable
         run: |
-          if (Test-Path .\hello.exe) {
-              .\hello.exe
-          } else if (Test-Path .\build\Debug\hello.exe) {
-              .\build\Debug\hello.exe
+          $source = $env:GITHUB_WORKSPACE
+          $build  = Join-Path $source "build"
+
+          if (Test-Path (Join-Path $source "hello.exe")) {
+              & (Join-Path $source "hello.exe")
+          } elseif (Test-Path (Join-Path $build "Debug\hello.exe")) {
+              & (Join-Path $build "Debug\hello.exe")
           } else {
               Write-Host "Executable not found."
               exit 1
