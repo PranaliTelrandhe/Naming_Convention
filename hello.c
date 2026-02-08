@@ -30,6 +30,7 @@ struct employee
     char name[50];
     int  age;
 };
+
 enum status
 { // Should start with 'e'
     ACTIVE,
