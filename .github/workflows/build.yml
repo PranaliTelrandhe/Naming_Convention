@@ -17,7 +17,7 @@ jobs:
     runs-on: [self-hosted, windows]
 
     steps:
-      # Step 1: Checkout code with a clean workspace
+      # Step 1: Checkout code into $GITHUB_WORKSPACE
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
@@ -46,7 +46,7 @@ jobs:
               Write-Host "No C/H files found to format."
           }
 
-      # Step 4: Setup Environment & Generate Compilation Database
+      # Step 4: Add CMake to PATH
       - name: Add CMake to PATH
         run: |
           $cmakePath = "C:\Program Files\CMake\bin"
@@ -56,6 +56,7 @@ jobs:
               [Environment]::SetEnvironmentVariable("Path", $env:PATH, [EnvironmentVariableTarget]::Process)
           }
 
+      # Step 5: Configure CMake (Clean Build)
       - name: Configure CMake (Clean Build)
         run: |
           $source = $env:GITHUB_WORKSPACE
@@ -65,11 +66,12 @@ jobs:
 
           cmake -S $source -B $build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 
-      # Step 5: Run Clang-Tidy on all C/H files
+      # Step 6: Run Clang-Tidy on all C/H files
       - name: Run Clang-Tidy
         run: |
-          $files = Get-ChildItem -Path $env:GITHUB_WORKSPACE -Include *.c,*.h -Recurse
-          $build = Join-Path $env:GITHUB_WORKSPACE "build"
+          $source = $env:GITHUB_WORKSPACE
+          $build  = Join-Path $source "build"
+          $files  = Get-ChildItem -Path $source -Include *.c,*.h -Recurse
           if ($files) {
               foreach ($file in $files) {
                   clang-tidy $file.FullName -p $build -checks="clang-analyzer-*,bugprone-*" --warnings-as-errors="*"
@@ -78,7 +80,7 @@ jobs:
               Write-Host "No C/H files found for clang-tidy."
           }
 
-      # Step 6: Build Project
+      # Step 7: Build Project
       - name: Build project
         run: |
           $source = $env:GITHUB_WORKSPACE
@@ -91,7 +93,7 @@ jobs:
               cmake --build $build
           }
 
-      # Step 7: Run the executable
+      # Step 8: Run the executable
       - name: Run executable
         run: |
           $source = $env:GITHUB_WORKSPACE
