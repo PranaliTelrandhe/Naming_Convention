@@ -17,16 +17,17 @@ jobs:
     runs-on: [self-hosted, windows]
 
     steps:
-      # Step 1: Checkout code into $GITHUB_WORKSPACE
+      # Step 1: Checkout repository
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           clean: true
 
-      # Step 2: Run Semgrep Naming Convention Scan on all C/H files
+      # Step 2: Run Semgrep Scan
       - name: Run Semgrep Scan
         run: |
-          $files = Get-ChildItem -Path $env:GITHUB_WORKSPACE -Include *.c,*.h -Recurse
+          $source = $env:GITHUB_WORKSPACE
+          $files = Get-ChildItem -Path $source -Include *.c,*.h -Recurse
           if ($files) {
               foreach ($file in $files) {
                   semgrep --config semgrep-naming-rules.yml $file.FullName
@@ -36,10 +37,11 @@ jobs:
           }
         continue-on-error: true
 
-      # Step 3: Format Code with clang-format
+      # Step 3: Format code with clang-format
       - name: Run Clang Format
         run: |
-          $files = Get-ChildItem -Path $env:GITHUB_WORKSPACE -Include *.c,*.h -Recurse
+          $source = $env:GITHUB_WORKSPACE
+          $files = Get-ChildItem -Path $source -Include *.c,*.h -Recurse
           if ($files) {
               $files | ForEach-Object { clang-format -i $_.FullName }
           } else {
@@ -56,7 +58,7 @@ jobs:
               [Environment]::SetEnvironmentVariable("Path", $env:PATH, [EnvironmentVariableTarget]::Process)
           }
 
-      # Step 5: Configure CMake (Clean Build)
+      # Step 5: Configure CMake
       - name: Configure CMake (Clean Build)
         run: |
           $source = $env:GITHUB_WORKSPACE
@@ -66,7 +68,7 @@ jobs:
 
           cmake -S $source -B $build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 
-      # Step 6: Run Clang-Tidy on all C/H files
+      # Step 6: Run Clang-Tidy
       - name: Run Clang-Tidy
         run: |
           $source = $env:GITHUB_WORKSPACE
@@ -80,7 +82,7 @@ jobs:
               Write-Host "No C/H files found for clang-tidy."
           }
 
-      # Step 7: Build Project
+      # Step 7: Build project
       - name: Build project
         run: |
           $source = $env:GITHUB_WORKSPACE

@@ -40,6 +40,7 @@ enum status
 float  salary;                // Should start with 'fp'
 double budget;                // Should start with 'db'
 void (*calculator)(int, int); // Should start with 'fn'
+
 int main()
 {
     // Local variables - some correct, some violations
