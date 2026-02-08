@@ -26,8 +26,8 @@ jobs:
       # Step 2: Run Semgrep Scan
       - name: Run Semgrep Scan
         run: |
-          $source = $env:GITHUB_WORKSPACE
-          $files = Get-ChildItem -Path $source -Include *.c,*.h -Recurse
+          $workspaceFolder = $env:GITHUB_WORKSPACE
+          $files = Get-ChildItem -Path $workspaceFolder -Include *.c,*.h -Recurse
           if ($files) {
               foreach ($file in $files) {
                   semgrep --config semgrep-naming-rules.yml $file.FullName
@@ -40,8 +40,8 @@ jobs:
       # Step 3: Format code with clang-format
       - name: Run Clang Format
         run: |
-          $source = $env:GITHUB_WORKSPACE
-          $files = Get-ChildItem -Path $source -Include *.c,*.h -Recurse
+          $workspaceFolder = $env:GITHUB_WORKSPACE
+          $files = Get-ChildItem -Path $workspaceFolder -Include *.c,*.h -Recurse
           if ($files) {
               $files | ForEach-Object { clang-format -i $_.FullName }
           } else {
@@ -59,21 +59,29 @@ jobs:
           }
 
       # Step 5: Copy CMakeLists.txt to auto-generated folder
-      - name: Copy CMakeLists.txt to auto-generated folder
+      - name: Copy CMakeLists.txt
         run: |
-          $sourceRepo = $env:GITHUB_WORKSPACE
-          $autoFolder = Join-Path $sourceRepo "Naming_Convention"
+          $workspaceFolder = $env:GITHUB_WORKSPACE
+          
+          # Calculate runner folder (two levels up from workspace)
+          $runnerFolder = Split-Path $workspaceFolder -Parent -Parent
+          
+          # Repo root (one level above runner folder)
+          $repoRoot = Split-Path $runnerFolder -Parent
+          
+          # Auto-generated folder inside workspace
+          $autoFolder = $workspaceFolder
+          
+          if (-not (Test-Path $autoFolder)) { New-Item -ItemType Directory -Path $autoFolder -Force }
 
-          if (-Not (Test-Path $autoFolder)) {
-              New-Item -ItemType Directory -Path $autoFolder
-          }
-
-          Copy-Item -Path (Join-Path $sourceRepo "CMakeLists.txt") -Destination $autoFolder -Force
+          # Copy CMakeLists.txt from repo root to auto-generated folder
+          Copy-Item -Path (Join-Path $repoRoot "CMakeLists.txt") -Destination $autoFolder -Force
 
       # Step 6: Configure CMake
       - name: Configure CMake (Clean Build)
         run: |
-          $autoFolder = Join-Path $env:GITHUB_WORKSPACE "Naming_Convention"
+          $workspaceFolder = $env:GITHUB_WORKSPACE
+          $autoFolder = $workspaceFolder
           $build = Join-Path $autoFolder "build"
 
           if (Test-Path $build) { Remove-Item -Recurse -Force $build }
@@ -83,9 +91,9 @@ jobs:
       # Step 7: Run Clang-Tidy
       - name: Run Clang-Tidy
         run: |
-          $source = $env:GITHUB_WORKSPACE
-          $build  = Join-Path $source "Naming_Convention/build"
-          $files  = Get-ChildItem -Path $source -Include *.c,*.h -Recurse
+          $workspaceFolder = $env:GITHUB_WORKSPACE
+          $build = Join-Path $workspaceFolder "build"
+          $files = Get-ChildItem -Path $workspaceFolder -Include *.c,*.h -Recurse
           if ($files) {
               foreach ($file in $files) {
                   clang-tidy $file.FullName -p $build -checks="clang-analyzer-*,bugprone-*" --warnings-as-errors="*"
@@ -97,12 +105,11 @@ jobs:
       # Step 8: Build project
       - name: Build project
         run: |
-          $source = $env:GITHUB_WORKSPACE
-          $autoFolder = Join-Path $source "Naming_Convention"
-          $build = Join-Path $autoFolder "build"
+          $workspaceFolder = $env:GITHUB_WORKSPACE
+          $build = Join-Path $workspaceFolder "build"
 
-          if (Test-Path (Join-Path $source "hello.c")) {
-              gcc (Join-Path $source "hello.c") -o (Join-Path $source "hello.exe")
+          if (Test-Path (Join-Path $workspaceFolder "hello.c")) {
+              gcc (Join-Path $workspaceFolder "hello.c") -o (Join-Path $workspaceFolder "hello.exe")
           } else {
               Write-Host "hello.c not found, attempting CMake build..."
               cmake --build $build
@@ -111,12 +118,11 @@ jobs:
       # Step 9: Run the executable
       - name: Run executable
         run: |
-          $source = $env:GITHUB_WORKSPACE
-          $autoFolder = Join-Path $source "Naming_Convention"
-          $build = Join-Path $autoFolder "build"
+          $workspaceFolder = $env:GITHUB_WORKSPACE
+          $build = Join-Path $workspaceFolder "build"
 
-          if (Test-Path (Join-Path $source "hello.exe")) {
-              & (Join-Path $source "hello.exe")
+          if (Test-Path (Join-Path $workspaceFolder "hello.exe")) {
+              & (Join-Path $workspaceFolder "hello.exe")
           } elseif (Test-Path (Join-Path $build "Debug\hello.exe")) {
               & (Join-Path $build "Debug\hello.exe")
           } else {

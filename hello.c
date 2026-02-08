@@ -25,6 +25,7 @@ bool Active;     // Should start with 'b'
 char input;      // Should start with 'c'
 int* pointer;    // Should start with 'p'
 int  numbers[5]; // Should start with 'a'
+
 struct employee
 { // Should start with 's'
     char name[50];
