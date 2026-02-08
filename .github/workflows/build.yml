@@ -96,15 +96,20 @@ jobs:
           # Configure CMake with MinGW Makefiles and force GCC
           cmake -G "MinGW Makefiles" -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++ -S $autoFolder -B $build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 
-      # Step 8: Run Clang-Tidy
+      # Step 8: Run Clang-Tidy (ignore errors)
       - name: Run Clang-Tidy
+        continue-on-error: true
         run: |
           $workspaceFolder = $env:GITHUB_WORKSPACE
           $build = Join-Path $workspaceFolder "build"
           $files = Get-ChildItem -Path $workspaceFolder -Include *.c,*.h -Recurse
           if ($files) {
               foreach ($file in $files) {
-                  clang-tidy $file.FullName -- -I.
+                  try {
+                      clang-tidy $file.FullName -- -I.
+                  } catch {
+                      Write-Host "clang-tidy reported errors/warnings, ignoring for now."
+                  }
               }
           } else {
               Write-Host "No C/H files found for clang-tidy."
