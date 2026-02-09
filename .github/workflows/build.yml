@@ -5,12 +5,12 @@ on:
     branches:
       - master
     paths:
-      - '**/*.c'
-      - '**/*.h'
+      - "**/*.c"
+      - "**/*.h"
   pull_request:
     paths:
-      - '**/*.c'
-      - '**/*.h'
+      - "**/*.c"
+      - "**/*.h"
 
 jobs:
   build:
@@ -114,6 +114,21 @@ jobs:
           } else {
               Write-Host "No C/H files found for clang-tidy."
           }
+
+        # Step X: Run Cppcheck
+      - name: Run Cppcheck
+        run: |
+          $workspaceFolder = $env:GITHUB_WORKSPACE
+          $flagsFile = Join-Path $workspaceFolder "cppcheck_flags.txt"
+          $files = Get-ChildItem -Path $workspaceFolder -Include *.c,*.h -Recurse
+          if ($files) {
+              foreach ($file in $files) {
+                  cppcheck @"$flagsFile" $file.FullName
+              }
+          } else {
+              Write-Host "No C/H files found for Cppcheck scan."
+          }
+        continue-on-error: true
 
       # Step 9: Build the project
       - name: Build project
