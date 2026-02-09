@@ -43,9 +43,9 @@ enum status
     INACTIVE
 };
 
-float  salary;                    // Should start with 'fp'
-double budget                     // Should start with 'db'
-    void (*calculator)(int, int); // Should start with 'fn'
+float  salary;                // Should start with 'fp'
+double budget;                // Should start with 'db'
+void (*calculator)(int, int); // Should start with 'fn'
 
 int main()
 {
