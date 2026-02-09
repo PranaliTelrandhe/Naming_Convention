@@ -115,7 +115,7 @@ jobs:
               Write-Host "No C/H files found for clang-tidy."
           }
 
-        # Step X: Run Cppcheck
+        # Step 9 : Run Cppcheck
       - name: Run Cppcheck
         run: |
           $workspaceFolder = $env:GITHUB_WORKSPACE
@@ -130,7 +130,7 @@ jobs:
           }
         continue-on-error: true
 
-      # Step 9: Build the project
+      # Step 10: Build the project
       - name: Build project
         run: |
           $workspaceFolder = $env:GITHUB_WORKSPACE
@@ -138,7 +138,7 @@ jobs:
 
           cmake --build $build
 
-      # Step 10: Run the executable
+      # Step 11: Run the executable
       - name: Run executable
         run: |
           $workspaceFolder = $env:GITHUB_WORKSPACE
