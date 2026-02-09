@@ -116,19 +116,19 @@ jobs:
           }
 
         # Step 9 : Run Cppcheck
-      - name: Run Cppcheck
-        run: |
-          $workspaceFolder = $env:GITHUB_WORKSPACE
-          $flagsFile = Join-Path $workspaceFolder "cppcheck_flags.txt"
-          $files = Get-ChildItem -Path $workspaceFolder -Include *.c,*.h -Recurse
-          if ($files) {
-              foreach ($file in $files) {
-                  cppcheck @"$flagsFile" $file.FullName
-              }
-          } else {
-              Write-Host "No C/H files found for Cppcheck scan."
-          }
+      - name: Run Cppcheck (PowerShell)
         continue-on-error: true
+        run: |
+          $flagsFile = Join-Path $env:GITHUB_WORKSPACE "cppcheck_flags.txt"
+          $files = Get-ChildItem -Path $env:GITHUB_WORKSPACE -Include *.c,*.h -Recurse
+
+          $flags = Get-Content $flagsFile -Raw
+
+          foreach ($file in $files) {
+              Write-Host "Running Cppcheck on $($file.FullName)"
+              cppcheck $flags $file.FullName
+          }
+
 
       # Step 10: Build the project
       - name: Build project
