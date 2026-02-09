@@ -32,9 +32,6 @@ struct employee
     int  age;
 };
 
-int* p = NULL;
-p      = 42; // null pointer dereference
-
 enum status
 { // Should start with 'e'
     ACTIVE,
