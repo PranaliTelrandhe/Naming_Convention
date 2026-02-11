@@ -57,6 +57,7 @@ int main()
     char  key       = 'K';
     int*  ptr       = NULL;
     float average   = 77.5;
+
     printf("Testing VmedD naming conventions\n");
     return 0;
 }
