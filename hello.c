@@ -17,6 +17,8 @@ enum eStatus
     STATUS_INACTIVE
 };
 
+
+
 float  fpSalary;
 double dbBudget;
 void (*fnCalculator)(int, int);
