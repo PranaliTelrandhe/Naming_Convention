@@ -83,16 +83,26 @@ jobs:
           cmake -G "MinGW Makefiles" -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++ -S $autoFolder -B $build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 
       # Step 8: Run reviewdog on all C files (compiler warnings)
-      - name: Run reviewdog for compiler warnings
+      - name: Run reviewdog (C warnings)
         run: |
           $workspaceFolder = $env:GITHUB_WORKSPACE
-          $build = Join-Path $workspaceFolder "build"
-          $compileCommands = Join-Path $build "compile_commands.json"
-          if (Test-Path $compileCommands) {
-              reviewdog -f=compilejson -name="Compiler Warnings" -reporter=github-pr-review -level=warning < $compileCommands
-          } else {
-              Write-Host "compile_commands.json not found, skipping reviewdog step."
+          $files = Get-ChildItem -Path $workspaceFolder -Include *.c -Recurse
+
+          if ($files.Count -eq 0) {
+              Write-Host "No C files found."
+              exit 0
           }
+
+          $allOutput = @()
+          foreach ($file in $files) {
+              $output = gcc -Wall -Wextra -fsyntax-only $file.FullName 2>&1
+              $output = $output -replace "\\", "/"   # Fix Windows paths for reviewdog
+              $allOutput += $output
+          }
+
+          $allOutput | reviewdog -efm="%f:%l:%c: %m" -name="compiler" -reporter=github-pr-review -level=warning
+        env:
+          REVIEWDOG_GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       # Step 9: Run Clang-Tidy (ignore errors)
       - name: Run Clang-Tidy
