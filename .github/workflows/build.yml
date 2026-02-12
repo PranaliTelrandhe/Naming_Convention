@@ -83,6 +83,7 @@ jobs:
           cmake -G "MinGW Makefiles" -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++ -S $autoFolder -B $build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 
       # Step 8: Run reviewdog on all C files (compiler warnings)
+      # Step 8: Run reviewdog on all C files (compiler warnings)
       - name: Run reviewdog (C warnings)
         run: |
           $workspaceFolder = $env:GITHUB_WORKSPACE
@@ -95,11 +96,14 @@ jobs:
 
           $allOutput = @()
           foreach ($file in $files) {
-              $output = gcc -Wall -Wextra -fsyntax-only $file.FullName 2>&1
-              $output = $output -replace "\\", "/"   # Fix Windows paths for reviewdog
+              # Run GCC using cmd /c so PowerShell ignores exit code
+              $output = cmd /c "gcc -Wall -Wextra -fsyntax-only `"$($file.FullName)`" 2>&1"
+              # Convert Windows backslashes to forward slashes for reviewdog
+              $output = $output -replace "\\", "/"
               $allOutput += $output
           }
 
+          # Send all GCC output to reviewdog
           $allOutput | reviewdog -efm="%f:%l:%c: %m" -name="compiler" -reporter=github-pr-review -level=warning
         env:
           REVIEWDOG_GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
