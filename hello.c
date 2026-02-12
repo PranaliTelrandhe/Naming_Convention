@@ -13,8 +13,6 @@ struct sEmployee
 };
 
 
-
-
 enum Status
 {
     STATUS_ACTIVE,
