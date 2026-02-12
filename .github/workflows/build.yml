@@ -37,6 +37,22 @@ jobs:
           }
         continue-on-error: true
 
+      # Step 2b: Generate SARIF from Semgrep
+      - name: Generate Semgrep SARIF
+        run: |
+          $workspaceFolder = $env:GITHUB_WORKSPACE
+          if (Test-Path $workspaceFolder) {
+              semgrep --config semgrep-naming-rules.yml --sarif --output semgrep-results.sarif $workspaceFolder
+          } else {
+              Write-Host "No C/H files found for SARIF generation."
+          }
+
+      # Step 2c: Upload Semgrep SARIF to GitHub
+      - name: Upload Semgrep SARIF
+        uses: github/codeql-action/upload-sarif@v2
+        with:
+          sarif_file: semgrep-results.sarif
+
       # Step 3: Run clang-format
       - name: Run Clang Format
         run: |
@@ -83,7 +99,6 @@ jobs:
           cmake -G "MinGW Makefiles" -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++ -S $autoFolder -B $build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 
       # Step 8: Run reviewdog on all C files (compiler warnings)
-      # Step 8: Run reviewdog on all C files (compiler warnings)
       - name: Run reviewdog (C warnings)
         run: |
           $workspaceFolder = $env:GITHUB_WORKSPACE
@@ -96,14 +111,11 @@ jobs:
 
           $allOutput = @()
           foreach ($file in $files) {
-              # Run GCC using cmd /c so PowerShell ignores exit code
               $output = cmd /c "gcc -Wall -Wextra -fsyntax-only `"$($file.FullName)`" 2>&1"
-              # Convert Windows backslashes to forward slashes for reviewdog
               $output = $output -replace "\\", "/"
               $allOutput += $output
           }
 
-          # Send all GCC output to reviewdog
           $allOutput | reviewdog -efm="%f:%l:%c: %m" -name="compiler" -reporter=github-pr-review -level=warning
         env:
           REVIEWDOG_GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
