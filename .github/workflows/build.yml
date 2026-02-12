@@ -23,37 +23,31 @@ jobs:
         with:
           clean: true
 
-      # Step 2: Run Semgrep Scan
-      - name: Run Semgrep Scan
+      # Step 2: Add Python Scripts folder to PATH (for semgrep)
+      - name: Add Python Scripts to PATH
         run: |
-          $workspaceFolder = $env:GITHUB_WORKSPACE
-          $files = Get-ChildItem -Path $workspaceFolder -Include *.c,*.h -Recurse
-          if ($files) {
-              foreach ($file in $files) {
-                  semgrep --config semgrep-naming-rules.yml $file.FullName
-              }
-          } else {
-              Write-Host "No C/H files found for Semgrep scan."
+          $pythonScripts = "C:\Users\Pranali\AppData\Local\Programs\Python\Python314\Scripts"
+          if ($env:PATH -notlike "*$pythonScripts*") {
+              $env:PATH += ";$pythonScripts"
+              [Environment]::SetEnvironmentVariable("Path", $env:PATH, [EnvironmentVariableTarget]::Process)
           }
-        continue-on-error: true
 
-      # Step 2b: Generate SARIF from Semgrep
-      - name: Generate Semgrep SARIF
+      # Step 3: Verify Semgrep
+      - name: Verify Semgrep
+        run: semgrep --version
+
+      # Step 4: Run Semgrep Scan (SARIF)
+      - name: Run Semgrep Scan (SARIF)
         run: |
           $workspaceFolder = $env:GITHUB_WORKSPACE
           if (Test-Path $workspaceFolder) {
               semgrep --config semgrep-naming-rules.yml --sarif --output semgrep-results.sarif $workspaceFolder
+              Write-Host "Semgrep SARIF generated at semgrep-results.sarif"
           } else {
               Write-Host "No C/H files found for SARIF generation."
           }
 
-      # Step 2c: Upload Semgrep SARIF to GitHub
-      - name: Upload Semgrep SARIF
-        uses: github/codeql-action/upload-sarif@v2
-        with:
-          sarif_file: semgrep-results.sarif
-
-      # Step 3: Run clang-format
+      # Step 5: Run clang-format
       - name: Run Clang Format
         run: |
           $workspaceFolder = $env:GITHUB_WORKSPACE
@@ -64,7 +58,7 @@ jobs:
               Write-Host "No C/H files found to format."
           }
 
-      # Step 4: Add CMake to PATH
+      # Step 6: Add CMake to PATH
       - name: Add CMake to PATH
         run: |
           $cmakePath = "C:\Program Files\CMake\bin"
@@ -73,13 +67,13 @@ jobs:
               [Environment]::SetEnvironmentVariable("Path", $env:PATH, [EnvironmentVariableTarget]::Process)
           }
 
-      # Step 5: Add MinGW to PATH
+      # Step 7: Add MinGW to PATH
       - name: Add MinGW to PATH
         run: |
           $env:PATH = "C:\msys64\mingw64\bin;" + $env:PATH
           [Environment]::SetEnvironmentVariable("Path", $env:PATH, [EnvironmentVariableTarget]::Process)
 
-      # Step 6: Copy CMakeLists.txt
+      # Step 8: Copy CMakeLists.txt
       - name: Copy CMakeLists.txt
         run: |
           $workspaceFolder = $env:GITHUB_WORKSPACE
@@ -89,7 +83,7 @@ jobs:
           if (-not (Test-Path $autoFolder)) { New-Item -ItemType Directory -Path $autoFolder -Force }
           Copy-Item -Path (Join-Path $repoRoot "CMakeLists.txt") -Destination $autoFolder -Force
 
-      # Step 7: Configure CMake
+      # Step 9: Configure CMake
       - name: Configure CMake
         run: |
           $workspaceFolder = $env:GITHUB_WORKSPACE
@@ -98,7 +92,7 @@ jobs:
           if (Test-Path $build) { Remove-Item -Recurse -Force $build }
           cmake -G "MinGW Makefiles" -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++ -S $autoFolder -B $build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 
-      # Step 8: Run reviewdog on all C files (compiler warnings)
+      # Step 10: Run reviewdog on all C files (compiler warnings)
       - name: Run reviewdog (C warnings)
         run: |
           $workspaceFolder = $env:GITHUB_WORKSPACE
@@ -111,16 +105,19 @@ jobs:
 
           $allOutput = @()
           foreach ($file in $files) {
+              # Run GCC using cmd /c so PowerShell ignores exit code
               $output = cmd /c "gcc -Wall -Wextra -fsyntax-only `"$($file.FullName)`" 2>&1"
+              # Convert Windows backslashes to forward slashes for reviewdog
               $output = $output -replace "\\", "/"
               $allOutput += $output
           }
 
+          # Send all GCC output to reviewdog
           $allOutput | reviewdog -efm="%f:%l:%c: %m" -name="compiler" -reporter=github-pr-review -level=warning
         env:
           REVIEWDOG_GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      # Step 9: Run Clang-Tidy (ignore errors)
+      # Step 11: Run Clang-Tidy (ignore errors)
       - name: Run Clang-Tidy
         continue-on-error: true
         run: |
@@ -138,14 +135,14 @@ jobs:
               Write-Host "No C/H files found for clang-tidy."
           }
 
-      # Step 10: Build the project
+      # Step 12: Build the project
       - name: Build project
         run: |
           $workspaceFolder = $env:GITHUB_WORKSPACE
           $build = Join-Path $workspaceFolder "build"
           cmake --build $build
 
-      # Step 11: Run the executable
+      # Step 13: Run the executable
       - name: Run executable
         run: |
           $workspaceFolder = $env:GITHUB_WORKSPACE
