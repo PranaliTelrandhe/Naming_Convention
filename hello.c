@@ -12,6 +12,7 @@ struct sEmployee
     int  nAge;
 };
 
+
 enum Status
 {
     STATUS_ACTIVE,
