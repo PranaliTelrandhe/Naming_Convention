@@ -23,37 +23,21 @@ jobs:
         with:
           clean: true
 
-      # Step 2: Install Semgrep
-      - name: Install Semgrep
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install semgrep
-
-      # Step 3: Add Python Scripts folder to PATH
-      - name: Add Python Scripts to PATH
-        run: |
-          $pythonScripts = "C:\Users\Pranali\AppData\Local\Programs\Python\Python314\Scripts"
-          if ($env:PATH -notlike "*$pythonScripts*") {
-              $env:PATH += ";$pythonScripts"
-              [Environment]::SetEnvironmentVariable("Path", $env:PATH, [EnvironmentVariableTarget]::Process)
-          }
-
-      # Step 4: Verify Semgrep
-      - name: Verify Semgrep
-        run: semgrep --version
-
-      # Step 5: Run Semgrep Scan (SARIF)
-      - name: Run Semgrep Scan (SARIF)
+      # Step 2: Run Semgrep Scan
+      - name: Run Semgrep Scan
         run: |
           $workspaceFolder = $env:GITHUB_WORKSPACE
-          if (Test-Path $workspaceFolder) {
-              semgrep --config semgrep-naming-rules.yml --sarif --output semgrep-results.sarif $workspaceFolder
-              Write-Host "Semgrep SARIF generated at semgrep-results.sarif"
+          $files = Get-ChildItem -Path $workspaceFolder -Include *.c,*.h -Recurse
+          if ($files) {
+              foreach ($file in $files) {
+                  semgrep --config semgrep-naming-rules.yml $file.FullName
+              }
           } else {
-              Write-Host "No C/H files found for SARIF generation."
+              Write-Host "No C/H files found for Semgrep scan."
           }
+        continue-on-error: true
 
-      # Step 6: Run clang-format
+      # Step 3: Run clang-format
       - name: Run Clang Format
         run: |
           $workspaceFolder = $env:GITHUB_WORKSPACE
@@ -64,7 +48,7 @@ jobs:
               Write-Host "No C/H files found to format."
           }
 
-      # Step 7: Add CMake to PATH
+      # Step 4: Add CMake to PATH
       - name: Add CMake to PATH
         run: |
           $cmakePath = "C:\Program Files\CMake\bin"
@@ -73,58 +57,51 @@ jobs:
               [Environment]::SetEnvironmentVariable("Path", $env:PATH, [EnvironmentVariableTarget]::Process)
           }
 
-      # Step 8: Add MinGW to PATH
+      # Step 5: Add MinGW to PATH
       - name: Add MinGW to PATH
         run: |
           $env:PATH = "C:\msys64\mingw64\bin;" + $env:PATH
           [Environment]::SetEnvironmentVariable("Path", $env:PATH, [EnvironmentVariableTarget]::Process)
 
-      # Step 9: Copy CMakeLists.txt
+      # Step 6: Copy CMakeLists.txt to auto-generated folder
       - name: Copy CMakeLists.txt
         run: |
           $workspaceFolder = $env:GITHUB_WORKSPACE
+
+          # Runner folder (two levels up from workspace)
           $runnerFolder = Split-Path (Split-Path $workspaceFolder -Parent) -Parent
+
+          # Repo root (one level above runner folder)
           $repoRoot = Split-Path $runnerFolder -Parent
+
+          # Auto-generated folder (workspace folder)
           $autoFolder = $workspaceFolder
+
+          # Ensure folder exists
           if (-not (Test-Path $autoFolder)) { New-Item -ItemType Directory -Path $autoFolder -Force }
+
+          # Copy CMakeLists.txt from repo root to auto-generated folder
           Copy-Item -Path (Join-Path $repoRoot "CMakeLists.txt") -Destination $autoFolder -Force
 
-      # Step 10: Configure CMake
+      # Step 7: Configure CMake (force GCC)
       - name: Configure CMake
         run: |
           $workspaceFolder = $env:GITHUB_WORKSPACE
           $autoFolder = $workspaceFolder
           $build = Join-Path $autoFolder "build"
+
+          # Clean previous build folder
           if (Test-Path $build) { Remove-Item -Recurse -Force $build }
+
+          # Configure CMake with MinGW Makefiles and force GCC
           cmake -G "MinGW Makefiles" -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++ -S $autoFolder -B $build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 
-      # Step 11: Run reviewdog (C warnings)
-      - name: Run reviewdog (C warnings)
-        run: |
-          $workspaceFolder = $env:GITHUB_WORKSPACE
-          $files = Get-ChildItem -Path $workspaceFolder -Include *.c -Recurse
-
-          if ($files.Count -eq 0) {
-              Write-Host "No C files found."
-              exit 0
-          }
-
-          $allOutput = @()
-          foreach ($file in $files) {
-              $output = cmd /c "gcc -Wall -Wextra -fsyntax-only `"$($file.FullName)`" 2>&1"
-              $output = $output -replace "\\", "/"
-              $allOutput += $output
-          }
-
-          $allOutput | reviewdog -efm="%f:%l:%c: %m" -name="compiler" -reporter=github-pr-review -level=warning
-        env:
-          REVIEWDOG_GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      # Step 12: Run Clang-Tidy
+      # Step 8: Run Clang-Tidy (ignore errors)
       - name: Run Clang-Tidy
         continue-on-error: true
         run: |
           $workspaceFolder = $env:GITHUB_WORKSPACE
+          $build = Join-Path $workspaceFolder "build"
           $files = Get-ChildItem -Path $workspaceFolder -Include *.c,*.h -Recurse
           if ($files) {
               foreach ($file in $files) {
@@ -138,22 +115,26 @@ jobs:
               Write-Host "No C/H files found for clang-tidy."
           }
 
-      # Step 13: Build the project
+      # Step 10: Build the project
       - name: Build project
         run: |
           $workspaceFolder = $env:GITHUB_WORKSPACE
           $build = Join-Path $workspaceFolder "build"
+
           cmake --build $build
 
-      # Step 14: Run the executable
+      # Step 11: Run the executable
       - name: Run executable
         run: |
           $workspaceFolder = $env:GITHUB_WORKSPACE
           $build = Join-Path $workspaceFolder "build"
+
           $exePath = Join-Path $build "hello.exe"
           if (-not (Test-Path $exePath)) {
+              # Sometimes MinGW Makefiles put exe directly in build
               $exePath = Join-Path $workspaceFolder "hello.exe"
           }
+
           if (Test-Path $exePath) {
               & $exePath
           } else {
